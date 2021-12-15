@@ -1,9 +1,10 @@
 package com.anzzapps.urlshortner;
 
+import lombok.Data;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,30 +12,36 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 @Configuration
+@Data
 public class DataBaseConfig {
+
+    @Value("${db.path}")
     String dbFileLocation;
 
     @Bean
     public void initializeDbLocally() throws IOException {
-        Path tempDirWithPrefix = Files.createDirectories(Paths.get(System.getProperty("user.home") + "/temp"));
-        Path fileToCreatePath = Paths.get(System.getProperty("user.home") + "/temp" + "/localDataBase.txt");
-        File file = fileToCreatePath.toFile();
-        if(!Files.exists(fileToCreatePath)) {
-            file = Files.createFile(fileToCreatePath).toFile();
+        dbFileLocation = System.getProperty("user.home") + dbFileLocation;
+        if(!Files.exists(Paths.get(dbFileLocation))) {
+            Files.createFile(Paths.get(dbFileLocation));
         }
-        this.dbFileLocation = file.toString();
     }
 
-    public void saveObject(String req, String shortUrl) throws IOException {
+    public void saveObject(String url, String shortUrl) throws IOException {
         Path fileName = Path.of(this.dbFileLocation);
-        Files.lines(fileName).filter(s -> s.contains(req)).findAny().orElseGet(() -> {
+        Files.lines(fileName).filter(s -> s.contains(url)).findAny().orElseGet(() -> {
             try {
-                Files.writeString(fileName, req + "|" + shortUrl + "\n", StandardOpenOption.APPEND);
+                Files.writeString(fileName, url + "|" + shortUrl + "\n", StandardOpenOption.APPEND);
             } catch (IOException e) {
                 e.printStackTrace();
             }
             return String.valueOf(fileName);
         });
         System.out.println(this.dbFileLocation);
+    }
+
+    public String retrieveObject(String url) throws IOException {
+        Path fileName = Path.of(this.dbFileLocation);
+        String entry = Files.lines(fileName).filter(s -> s.contains(url)).findAny().orElse("Url Not Found!");
+        return entry.split("\\|")[0];
     }
 }
